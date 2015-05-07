@@ -30,30 +30,55 @@ package uk.ac.rdg.resc.nd;
 
 import java.util.List;
 
-import com.sun.javafx.collections.ObservableListWrapper;
-
-import javafx.collections.ObservableList;
-
+/**
+ * A class defining a dimension which images in the viewer can vary along.
+ *
+ * @author Guy Griffiths
+ */
 public class Dimension {
+    /** The ID of the dimension */
     private final String dimName;
+    /** The title of the dimension */
     private final String dimTitle;
-    private final ObservableList<String> values;
+    /** The valid values of the dimension */
+    private final List<String> values;
 
+    /**
+     * Create a new dimension
+     * 
+     * @param dimName
+     *            The id of the dimension (i.e. what it is referred to in the
+     *            name format)
+     * @param dimTitle
+     *            The title of the dimension to be displayed in the coordinate
+     *            selector
+     * @param values
+     *            A {@link List} of values which this dimension can take
+     */
     public Dimension(String dimName, String dimTitle, List<String> values) {
         this.dimName = dimName;
         this.dimTitle = dimTitle;
-        this.values = new ObservableListWrapper<>(values);
+        this.values = values;
     }
 
+    /**
+     * @return The name of the dimension
+     */
     public String getDimName() {
         return dimName;
     }
 
+    /**
+     * @return The title of the dimension
+     */
     public String getDimTitle() {
         return dimTitle;
     }
 
-    public ObservableList<String> getValues() {
+    /**
+     * @return The valid values of the dimension
+     */
+    public List<String> getValues() {
         return values;
     }
 }

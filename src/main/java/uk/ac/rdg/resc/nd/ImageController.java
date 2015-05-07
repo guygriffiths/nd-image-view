@@ -36,45 +36,162 @@ import java.util.Map.Entry;
 
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.stage.Stage;
 
+/**
+ * A controller which accepts actions from the {@link VariableSelector} and
+ * populates the {@link ImageView}s.
+ *
+ * @author Guy Griffiths
+ */
 public class ImageController {
+    /** A {@link Map} of non-selectable dimension value to {@link ImageView} */
     private Map<String, ImageView> views;
+    /** The {@link Config} file defining the settings */
     private Config config;
-    private ImagePathManager pathManager;
+    /** The main {@link Stage} of the application */
+    private Stage mainStage;
 
-    public ImageController(Config config, ImagePathManager pathManager) {
-        // TODO Auto-generated constructor stub
+    /**
+     * @param config
+     *            The {@link Config} defining the settings
+     * @param primaryStage
+     *            The main {@link Stage} of the application
+     */
+    public ImageController(Config config, Stage primaryStage) {
         views = new HashMap<>();
         this.config = config;
-        this.pathManager = pathManager;
+        this.mainStage = primaryStage;
     }
 
+    /**
+     * Registers an {@link ImageView}
+     * 
+     * @param view
+     *            The {@link ImageView}
+     * @param alias
+     *            The value which refers to this view
+     */
     public void addImageView(ImageView view, String alias) {
         views.put(alias, view);
     }
 
+    /**
+     * Selects a set of images
+     * 
+     * @param coords
+     *            The values of all selectable dimensions to choose
+     */
     public void selectImageSet(String... coords) {
-        List<Dimension> dimensions = config.getDimensions();
-        if (coords.length != dimensions.size() - 1) {
+        /*
+         * Check we have the right number of arguments
+         */
+        List<Dimension> dimensions = config.getSelectableDimensions();
+        if (coords.length != dimensions.size()) {
             throw new IllegalArgumentException(
                     "Coords of image set must be equal to total number of dimensions - 1");
         }
-        String[] pathCoords = new String[coords.length + 1];
-        int offset = 0;
-        for (int i = 0; i < coords.length; i++) {
-            if (i == config.getPlotByFieldIndex()) {
-                offset = 1;
-            }
-            pathCoords[i+offset] = coords[i];
-        }
+        /*
+         * For each of the ImageViews, get the path of the resultant image and
+         * set the Image
+         */
         for (Entry<String, ImageView> view : views.entrySet()) {
-            pathCoords[config.getPlotByFieldIndex()] = view.getKey();
-            File path = pathManager.getPath(pathCoords);
-            if(path != null) {
+            File path = getPath(view.getKey(), coords);
+            if (path != null) {
                 view.getValue().setImage(new Image("file:" + path.getAbsolutePath()));
             } else {
                 view.getValue().setImage(null);
             }
         }
+    }
+
+    /**
+     * Quit the application
+     */
+    public void quit() {
+        mainStage.close();
+    }
+
+    /**
+     * Toggle between fullscreen / windowed
+     */
+    public void toggleFullscreen() {
+        mainStage.setFullScreen(!mainStage.isFullScreen());
+    }
+
+    /**
+     * @return A {@link List} of {@link Dimension}s which the user can select
+     *         values of
+     */
+    public List<Dimension> getSelectableDimensions() {
+        return config.getSelectableDimensions();
+    }
+
+    /**
+     * @return The {@link Dimension} which varies across the screen and hence
+     *         which users cannot select
+     */
+    public Dimension getNonSelectableDimension() {
+        return config.getNonSelectableDimension();
+    }
+
+    /**
+     * Gets the {@link File} associated with the given set of co-ordinates
+     * 
+     * @param nonSelectableValue
+     *            The value for the non-selectable {@link Dimension}
+     * @param selectableValues
+     *            The values for the selectable {@link Dimension}s, in the same
+     *            order as the dimensions returned by
+     *            {@link ImageController#getSelectableDimensions()}
+     * @return A {@link File} pointing to the image, or <code>null</code> if it
+     *         does not exist
+     */
+    public File getPath(String nonSelectableValue, String... selectableValues) {
+        if (selectableValues.length != getSelectableDimensions().size()) {
+            return null;
+        }
+
+        String name = config.getNameFormat();
+        for (int i = 0; i < selectableValues.length; i++) {
+            name = doNameReplace(name, getSelectableDimensions().get(i).getDimName(),
+                    selectableValues[i]);
+        }
+        name = doNameReplace(name, getNonSelectableDimension().getDimName(), nonSelectableValue);
+
+        File file = new File(config.getPath() + name);
+        if (file.exists()) {
+            return file;
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * Convenience method for replacing tokens in the name format
+     * 
+     * @param nameFormat
+     *            The name format
+     * @param dimName
+     *            The name of the dimension to replace
+     * @param value
+     *            The value to replace the dimName with
+     * @return The name format with the substitution made
+     */
+    private String doNameReplace(String nameFormat, String dimName, String value) {
+        if (!value.isEmpty()) {
+            nameFormat = nameFormat.replaceAll("\\??\\$\\{" + dimName + "\\}", value);
+        } else {
+            /*
+             * This deals with the case where we have an empty dimension value.
+             * 
+             * Name format strings can have a character which should be omitted
+             * if it immediately proceeds an empty dimension, indicated by a
+             * question mark
+             */
+            nameFormat = nameFormat.replaceAll(".\\?\\$\\{" + dimName + "\\}", value);
+            nameFormat = nameFormat.replaceAll("\\$\\{" + dimName + "\\}", value);
+        }
+        return nameFormat;
     }
 }

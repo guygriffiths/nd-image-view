@@ -1,0 +1,15 @@
+.nd-grid-main {
+/* 	-fx-background-color: radial-gradient(radius 200%, black, #555555); */
+	-fx-background-color: radial-gradient(center 100% 100%, radius 100%, darkgray, black);
+}
+
+.nd-grid-variables {
+	-fx-background-color: linear-gradient(to bottom right, #aaaaaa, #eeeeee, #aaaaaa);
+	-fx-padding: 10;
+	-fx-background-radius: 10;
+	-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.8), 20, 0, 0, 0);
+}
+
+.nd-settings {
+	-fx-background-color: transparent;
+}

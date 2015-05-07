@@ -33,292 +33,507 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * Class which parses the config file and provides access to the values
+ *
+ * @author Guy Griffiths
+ */
 public class Config {
     public final static String SETTINGS = "${settings}";
 
+    /** The path to the data */
     private String path = null;
+    /** The naming format of the images to be displayed */
     private String nameFormat = null;
-    private String plotByField = null;
-    private int plotByFieldIndex;
+    /** The number of rows of images */
     private int gridRows = 0;
+    /** The number of columns of images */
     private int gridCols = 0;
+    /** The layout of the grid - which image goes where */
     private String[][] gridLayout = null;
-    private List<Dimension> dimensions = new ArrayList<>();
+    /** The selectable {@link Dimension}s which all images depend on */
+    private List<Dimension> selectableDimensions = new ArrayList<>();
+    /** The {@link Dimension}s which varies across the screen */
+    private Dimension nonSelectableDimension = null;
+    /** The relative percentages of the row heights */
+    private double[] rowHeights;
+    /** The relative percentages of the column widths */
+    private double[] colWidths;
 
+    /**
+     * Parse the config file and initialise all of the valid variables
+     * 
+     * @param configFile
+     *            A {@link File} object pointing to the config
+     * @throws IOException
+     *             If there is a problem reading the file
+     * @throws ConfigException
+     *             If the configuration is not valid for some reason
+     */
     public Config(File configFile) throws IOException, ConfigException {
         BufferedReader reader = new BufferedReader(new FileReader(configFile));
-        String line;
+        try {
+            String plotByField = null;
+            String line;
 
-        List<String[]> gridConfigLines = new ArrayList<>();
-        boolean definingDimension = false;
-        Dimension currentDimension = null;
-        while ((line = reader.readLine()) != null) {
-            if (line.startsWith("#") || line.trim().isEmpty()) {
+            /*
+             * We want to store the lines which pertain to the grid layout
+             * before parsing their contents
+             */
+            List<String[]> gridConfigLines = new ArrayList<>();
+
+            /*
+             * We use these so that dimensions can be defined anywhere
+             */
+            boolean definingDimension = false;
+            Dimension currentDimension = null;
+
+            /*
+             * We start with zero-length arrays. If the row heights/column
+             * widths are not defined, this means that they will all be evenly
+             * distributed
+             */
+            String[] rowHeightsStrs = new String[0];
+            String[] colWidthsStrs = new String[0];
+
+            /*
+             * Now read each line and parse
+             */
+            while ((line = reader.readLine()) != null) {
+                if (line.startsWith("#") || line.trim().isEmpty()) {
+                    /*
+                     * Comments start with #
+                     */
+                    continue;
+                }
+
                 /*
-                 * Comments start with #
+                 * Check if we are about to start defining a dimension
                  */
-                continue;
-            }
-
-            Pattern dimensionStart = Pattern.compile("\\[(.*)\\]");
-            Matcher m = dimensionStart.matcher(line);
-            if (m.find()) {
-                if (definingDimension) {
-                    dimensions.add(currentDimension);
-                } else {
-                    definingDimension = true;
-                }
-                String name = m.group(1);
-                String title = m.group(1);
-                if(".".equals(name)) {
-                    name = "";
-                }
-                currentDimension = new Dimension(name, title, new ArrayList<>());
-                continue;
-            }
-
-            if (definingDimension && !line.trim().isEmpty()) {
-                line = line.trim();
-                if (line.equals(".")) {
+                Pattern dimensionStart = Pattern.compile("\\[(.*)\\]");
+                Matcher m = dimensionStart.matcher(line);
+                if (m.find()) {
                     /*
-                     * We define empty dimensions in the config with a single
-                     * dot
+                     * We were defining a dimension and we've just started a new
+                     * one, so add the previous one to the list
                      */
-                    currentDimension.getValues().add("");
-                } else {
-                    currentDimension.getValues().add(line);
+                    if (definingDimension) {
+                        selectableDimensions.add(currentDimension);
+                    } else {
+                        definingDimension = true;
+                    }
+                    /*
+                     * For now the dimension name and title are the same, but we
+                     * may want to make the titles definable (e.g.
+                     * [dimname,Dimension Title])
+                     * 
+                     * TODO Make dimension title configurable
+                     */
+                    String name = m.group(1);
+                    String title = m.group(1);
+                    if (".".equals(name)) {
+                        name = "";
+                    }
+                    /*
+                     * Start a new dimension.
+                     */
+                    currentDimension = new Dimension(name, title, new ArrayList<>());
+                    continue;
+                }
+
+                /*
+                 * If we are defining a dimension, add this value to it
+                 */
+                if (definingDimension && !line.trim().isEmpty()) {
+                    line = line.trim();
+                    if (line.equals(".")) {
+                        /*
+                         * We define empty dimensions in the config with a
+                         * single dot
+                         */
+                        currentDimension.getValues().add("");
+                    } else {
+                        currentDimension.getValues().add(line);
+                    }
+                }
+
+                /*
+                 * Define the path to the data
+                 */
+                if (line.startsWith("path")) {
+                    if (path != null) {
+                        throw new ConfigException(
+                                "You must only provide a single value for path in the config");
+                    }
+
+                    path = readField(line, "path");
+                    if (!path.endsWith("/")) {
+                        path = path + "/";
+                    }
+
+                    definingDimension = false;
+                    if (definingDimension) {
+                        /*
+                         * We were still defining a dimension
+                         */
+                        selectableDimensions.add(currentDimension);
+                    }
+                }
+
+                /*
+                 * Define the name format of the images
+                 */
+                if (line.startsWith("name_format")) {
+                    if (nameFormat != null) {
+                        throw new ConfigException(
+                                "You must only provide a single value for name_format in the config");
+                    }
+                    nameFormat = readField(line, "name_format");
+                    definingDimension = false;
+                    if (definingDimension) {
+                        /*
+                         * We were still defining a dimension
+                         */
+                        selectableDimensions.add(currentDimension);
+                    }
+                }
+
+                /*
+                 * Define the dimension to plot by
+                 */
+                if (line.startsWith("plot_by")) {
+                    if (plotByField != null) {
+                        reader.close();
+                        throw new ConfigException(
+                                "You must only provide a single value for plot_by_field in the config");
+                    }
+                    plotByField = readField(line, "plot_by");
+                    definingDimension = false;
+                    if (definingDimension) {
+                        /*
+                         * We were still defining a dimension
+                         */
+                        selectableDimensions.add(currentDimension);
+                    }
+                }
+
+                /*
+                 * Define the row heights
+                 */
+                if (line.startsWith("row_heights")) {
+                    if (rowHeightsStrs != null) {
+                        throw new ConfigException(
+                                "You must only provide a single value for row_heights in the config");
+                    }
+                    rowHeightsStrs = readField(line, "row_heights").split(",");
+                    definingDimension = false;
+                    if (definingDimension) {
+                        /*
+                         * We were still defining a dimension
+                         */
+                        selectableDimensions.add(currentDimension);
+                    }
+                }
+
+                /*
+                 * Define the column widths
+                 */
+                if (line.startsWith("col_widths")) {
+                    if (colWidthsStrs != null) {
+                        throw new ConfigException(
+                                "You must only provide a single value for col_widths in the config");
+                    }
+                    colWidthsStrs = readField(line, "col_widths").split(",");
+                    definingDimension = false;
+                    if (definingDimension) {
+                        /*
+                         * We were still defining a dimension
+                         */
+                        selectableDimensions.add(currentDimension);
+                    }
+                }
+
+                /*
+                 * Define the grid layout
+                 */
+                if (line.startsWith("grid_")) {
+                    String[] gridSplit = line.split("=");
+                    if (gridSplit.length != 2) {
+                        reader.close();
+                        throw new ConfigException(
+                                "Grid config options must be of the form \"grid_x_y = ...\"");
+                    }
+                    gridConfigLines.add(gridSplit);
+                    definingDimension = false;
+                    if (definingDimension) {
+                        /*
+                         * We were still defining a dimension
+                         */
+                        selectableDimensions.add(currentDimension);
+                    }
                 }
             }
-            
-            if (line.startsWith("path")) {
-                String[] pathSplit = line.split("=");
-                if (pathSplit.length != 2) {
-                    reader.close();
-                    throw new ConfigException(
-                            "Path config option must be of the form \"path = ...\"");
-                }
-                path = pathSplit[1].trim();
-                if(!path.endsWith("/")) {
-                    path = path + "/";
-                }
-                definingDimension = false;
-                if(definingDimension) {
-                    /*
-                     * We were still defining a dimension
-                     */
-                    dimensions.add(currentDimension);
-                }
+            if (definingDimension) {
+                /*
+                 * We were still defining a dimension when the file ended
+                 */
+                selectableDimensions.add(currentDimension);
+            }
+            reader.close();
+
+            /*
+             * We have finished reading the config file. Now we must process
+             * some of the values to store them in an accessible manner.
+             * 
+             * First check that all mandatory values were provided
+             */
+
+            if (path == null) {
+                throw new ConfigException("You must provide a value for path in the config");
             }
 
-            if (line.startsWith("name_format")) {
-                String[] nfSplit = line.split("=");
-                if (nfSplit.length != 2) {
-                    reader.close();
-                    throw new ConfigException(
-                            "Name format config option must be of the form \"name_format = ...\"");
-                }
-                nameFormat = nfSplit[1].trim();
-                definingDimension = false;
-                if(definingDimension) {
-                    /*
-                     * We were still defining a dimension
-                     */
-                    dimensions.add(currentDimension);
-                }
+            if (nameFormat == null) {
+                throw new ConfigException("You must provide a value for name_format in the config");
             }
 
-            if (line.startsWith("plot_by")) {
-                String[] pbSplit = line.split("=");
-                if (pbSplit.length != 2) {
-                    reader.close();
-                    throw new ConfigException(
-                            "Plot by field config option must be of the form \"plot_by = ...\"");
-                }
-                plotByField = pbSplit[1].trim();
-                definingDimension = false;
-                if(definingDimension) {
-                    /*
-                     * We were still defining a dimension
-                     */
-                    dimensions.add(currentDimension);
-                }
+            if (plotByField == null) {
+                throw new ConfigException("You must provide a value for plot_by in the config");
             }
 
-            if (line.startsWith("grid_")) {
-                String[] gridSplit = line.split("=");
-                if (gridSplit.length != 2) {
-                    reader.close();
+            if (selectableDimensions.size() == 0) {
+                throw new ConfigException("You must provide at least one dimension");
+            }
+
+            /*
+             * Find the dimension which will vary across the screen
+             */
+            for (int i = 0; i < selectableDimensions.size(); i++) {
+                if (selectableDimensions.get(i).getDimName().equals(plotByField)) {
+                    nonSelectableDimension = selectableDimensions.remove(i);
+                    break;
+                }
+            }
+            if (nonSelectableDimension == null) {
+                throw new ConfigException("You have stated the field " + plotByField
+                        + " to plot by, but this is not defined as a dimension");
+            }
+
+            /*
+             * We have read the config file, now process the lines defining the
+             * grid layout (they all need to be read first so that we can
+             * calculate the grid size)
+             */
+            for (String[] gridConfigLine : gridConfigLines) {
+                /*
+                 * gridConfigLine is already guaranteed to be of length 2.
+                 */
+                String[] gridIndices = gridConfigLine[0].split("_");
+                if (gridIndices.length != 3) {
                     throw new ConfigException(
                             "Grid config options must be of the form \"grid_x_y = ...\"");
                 }
-                gridConfigLines.add(gridSplit);
-                definingDimension = false;
-                if(definingDimension) {
-                    /*
-                     * We were still defining a dimension
-                     */
-                    dimensions.add(currentDimension);
+                /*
+                 * Update the number of rows
+                 */
+                try {
+                    gridRows = Math.max(Integer.parseInt(gridIndices[1]) + 1, gridRows);
+                } catch (NumberFormatException e) {
+                    throw new ConfigException(
+                            "Grid config options must be of the form \"grid_x_y = ...\", where x is a valid integer for the row number "
+                                    + gridConfigLine[0]);
+                }
+                /*
+                 * Update the number of columns
+                 */
+                try {
+                    gridCols = Math.max(Integer.parseInt(gridIndices[2].trim()) + 1, gridCols);
+                } catch (NumberFormatException e) {
+                    e.printStackTrace();
+                    throw new ConfigException(
+                            "Grid config options must be of the form \"grid_x_y = ...\", where y is a valid integer for the column number "
+                                    + gridConfigLine[0]);
                 }
             }
-        }
-        if(definingDimension) {
-            /*
-             * We were still defining a dimension
-             */
-            dimensions.add(currentDimension);
-        }
-        reader.close();
-        
-        if (path == null) {
-            throw new ConfigException("You must provide a value for path in the config");
-        }
-
-        if (nameFormat == null) {
-            throw new ConfigException("You must provide a value for name_format in the config");
-        }
-
-        if (plotByField == null) {
-            throw new ConfigException("You must provide a value for plot_by in the config");
-        }
-
-        if (dimensions.size() == 0) {
-            throw new ConfigException("You must provide at least one dimension");
-        }
-
-        boolean plotDimFound = false;
-        for (int i=0;i<dimensions.size();i++) {
-            if (dimensions.get(i).getDimName().equals(plotByField)) {
-                plotDimFound = true;
-                plotByFieldIndex = i;
-                break;
-            }
-        }
-        if (!plotDimFound) {
-            throw new ConfigException("You have stated the field " + plotByField
-                    + " to plot by, but this is not defined as a dimension");
-        }
-
-        /*
-         * We have read the config file, now process the lines defining the grid
-         * layout (they all need to be read first so that we can calculate the
-         * grid size)
-         */
-        for (String[] gridConfigLine : gridConfigLines) {
-            /*
-             * gridConfigLine is already guaranteed to be of length 2.
-             */
-            String[] gridIndices = gridConfigLine[0].split("_");
-            if (gridIndices.length != 3) {
+            if (gridRows == 0 || gridCols == 0) {
                 throw new ConfigException(
-                        "Grid config options must be of the form \"grid_x_y = ...\"");
+                        "You must define at least one row and one column to display data in!");
             }
-            try {
-                gridRows = Math.max(Integer.parseInt(gridIndices[1]) + 1, gridRows);
-            } catch (NumberFormatException e) {
-                throw new ConfigException(
-                        "Grid config options must be of the form \"grid_x_y = ...\", where x is a valid integer for the row number "
-                                + gridConfigLine[0]);
-            }
-            try {
-                gridCols = Math.max(Integer.parseInt(gridIndices[2].trim()) + 1, gridCols);
-            } catch (NumberFormatException e) {
-                e.printStackTrace();
-                throw new ConfigException(
-                        "Grid config options must be of the form \"grid_x_y = ...\", where y is a valid integer for the column number "
-                                + gridConfigLine[0]);
-            }
-        }
-        if (gridRows == 0 || gridCols == 0) {
-            throw new ConfigException(
-                    "You must define at least one row and one column to display data in!");
-        }
-        gridLayout = new String[gridRows][gridCols];
-        for (String[] gridConfigLine : gridConfigLines) {
+
             /*
-             * gridConfigLine is already guaranteed to be of length 2.
+             * We now know how many rows / columns to define
              */
-            String[] gridIndices = gridConfigLine[0].split("_");
+            gridLayout = new String[gridRows][gridCols];
+            rowHeights = new double[gridRows];
+            colWidths = new double[gridCols];
+
             /*
-             * This looks fraught with possible exceptions, but it isn't, since
-             * they will have been thrown in the previous section
+             * Process all available row heights, dividing the left over space
+             * equally
              */
-            String gridContents = gridConfigLine[1].trim();
-            if(".".equals(gridContents)) {
-                gridContents = "";
+            double totalRowFrac = 0;
+            for (int i = 0; i < gridRows; i++) {
+                double rowHeight;
+                if (i >= rowHeightsStrs.length) {
+                    rowHeight = (1.0 - totalRowFrac) / (gridRows - rowHeightsStrs.length);
+                } else {
+                    rowHeight = Double.parseDouble(rowHeightsStrs[i]) / 100.0;
+                    totalRowFrac += rowHeight;
+                }
+                rowHeights[i] = rowHeight;
             }
-            gridLayout[Integer.parseInt(gridIndices[1])][Integer.parseInt(gridIndices[2].trim())] = gridContents;
+
+            /*
+             * Process all available column widths, dividing the left over space
+             * equally
+             */
+            double totalColFrac = 0;
+            for (int i = 0; i < gridCols; i++) {
+                double colWidth;
+                if (i >= colWidthsStrs.length) {
+                    colWidth = (1.0 - totalColFrac) / (gridCols - colWidthsStrs.length);
+                } else {
+                    colWidth = Double.parseDouble(colWidthsStrs[i]) / 100.0;
+                    totalColFrac += colWidth;
+                }
+                colWidths[i] = colWidth;
+            }
+
+            /*
+             * Now store the values to be displayed in each grid cell
+             */
+            for (String[] gridConfigLine : gridConfigLines) {
+                /*
+                 * gridConfigLine is already guaranteed to be of length 2.
+                 */
+                String[] gridIndices = gridConfigLine[0].split("_");
+                /*
+                 * This looks fraught with possible exceptions, but it isn't,
+                 * since they will have been thrown in the previous section
+                 */
+                String gridContents = gridConfigLine[1].trim();
+                if (".".equals(gridContents)) {
+                    gridContents = "";
+                }
+                if (!nonSelectableDimension.getValues().contains(gridContents)
+                        && !SETTINGS.equals(gridContents)) {
+                    throw new ConfigException("You have chosen to plot by \"" + plotByField
+                            + "\", but the plot at co-ords (" + gridIndices[1] + ","
+                            + gridIndices[2] + ") is set to \"" + gridContents
+                            + "\", which is not one of the valid values for the " + plotByField
+                            + " dimension.");
+                }
+                gridLayout[Integer.parseInt(gridIndices[1])][Integer
+                        .parseInt(gridIndices[2].trim())] = gridContents;
+            }
+        } catch (ConfigException e) {
+            /*
+             * If we caught a ConfigException, re-throw it here.
+             * 
+             * This is just so we can use the finally block to close the
+             * reader...
+             */
+            throw e;
+        } finally {
+            reader.close();
         }
     }
-    
+
+    /**
+     * Read a field of the form "key = value" and split it
+     * 
+     * @param line
+     *            The line to be read
+     * @param fieldName
+     *            The field name to display in the exception if the line is
+     *            formatted badly
+     * @return The trimmed value
+     * @throws ConfigException
+     *             If the line is not of the form "key = value"
+     */
+    private String readField(String line, String fieldName) throws ConfigException {
+        String[] fieldSplit = line.split("=");
+        if (fieldSplit.length != 2) {
+            throw new ConfigException("Path config option must be of the form \"" + fieldName
+                    + " = ...\"");
+        }
+        return fieldSplit[1].trim();
+    }
+
+    /**
+     * @return The path to the data
+     */
     public String getPath() {
         return path;
     }
 
+    /**
+     * @return The name format of the images
+     */
     public String getNameFormat() {
         return nameFormat;
     }
 
-    public String getPlotByField() {
-        return plotByField;
-    }
-    
-    public int getPlotByFieldIndex() {
-        return plotByFieldIndex;
-    }
-
-    public List<Dimension> getDimensions() {
-        return dimensions;
+    /**
+     * @return The {@link Dimension} which will vary across the screen
+     */
+    public Dimension getNonSelectableDimension() {
+        return nonSelectableDimension;
     }
 
+    /**
+     * @return A {@link List} of {@link Dimension}s which will be selectable
+     */
+    public List<Dimension> getSelectableDimensions() {
+        return selectableDimensions;
+    }
+
+    /**
+     * @return A 2D array containing the values of the non-selectable dimension
+     *         and where on the screen they should be plotted
+     */
     public String[][] getGridLayout() {
         return gridLayout;
     }
 
-    @Override
-    public int hashCode() {
-        final int prime = 31;
-        int result = 1;
-        result = prime * result + ((dimensions == null) ? 0 : dimensions.hashCode());
-        result = prime * result + Arrays.hashCode(gridLayout);
-        result = prime * result + ((nameFormat == null) ? 0 : nameFormat.hashCode());
-        result = prime * result + ((plotByField == null) ? 0 : plotByField.hashCode());
-        return result;
+    /**
+     * @return The number of rows in the layout
+     */
+    public int getNRows() {
+        return gridRows;
     }
 
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj)
-            return true;
-        if (obj == null)
-            return false;
-        if (getClass() != obj.getClass())
-            return false;
-        Config other = (Config) obj;
-        if (dimensions == null) {
-            if (other.dimensions != null)
-                return false;
-        } else if (!dimensions.equals(other.dimensions))
-            return false;
-        if (!Arrays.deepEquals(gridLayout, other.gridLayout))
-            return false;
-        if (nameFormat == null) {
-            if (other.nameFormat != null)
-                return false;
-        } else if (!nameFormat.equals(other.nameFormat))
-            return false;
-        if (plotByField == null) {
-            if (other.plotByField != null)
-                return false;
-        } else if (!plotByField.equals(other.plotByField))
-            return false;
-        return true;
+    /**
+     * @return The number of columns in the layout
+     */
+    public int getNCols() {
+        return gridCols;
     }
 
+    /**
+     * @return An array of size ({@link Config#getNRows()}) containing the
+     *         percentage heights of the rows in the layout
+     */
+    public double[] getRowHeights() {
+        return rowHeights;
+    }
+
+    /**
+     * @return An array of size ({@link Config#getNCols()}) containing the
+     *         percentage widths of the columns in the layout
+     */
+    public double[] getColWidths() {
+        return colWidths;
+    }
+
+    /**
+     * A class used to indicate a problem or inconsistency in the config file
+     *
+     * @author Guy Griffiths
+     */
     public class ConfigException extends Exception {
         private static final long serialVersionUID = 1L;
 
