@@ -127,14 +127,24 @@ public class Config {
                         definingDimension = true;
                     }
                     /*
-                     * For now the dimension name and title are the same, but we
-                     * may want to make the titles definable (e.g.
-                     * [dimname,Dimension Title])
-                     * 
-                     * TODO Make dimension title configurable
+                     * Dimension name and title are of the form
+                     * [dimname;Dimension Title], but if the title is missing it
+                     * will default to the dimension name
                      */
-                    String name = m.group(1);
-                    String title = m.group(1);
+                    String[] nameTitle = m.group(1).split(";");
+                    String name;
+                    String title;
+                    if (nameTitle.length == 1) {
+                        name = nameTitle[0];
+                        title = nameTitle[0];
+                    } else if (nameTitle.length == 2) {
+                        name = nameTitle[0];
+                        title = nameTitle[1];
+                    } else {
+                        throw new ConfigException(
+                                "Dimension name specifier must be of the form \"[dimname;Dimension Title]\".  The title is an optional field");
+                    }
+
                     if (".".equals(name)) {
                         name = "";
                     }
@@ -225,7 +235,7 @@ public class Config {
                  * Define the row heights
                  */
                 if (line.startsWith("row_heights")) {
-                    if (rowHeightsStrs != null) {
+                    if (rowHeightsStrs.length > 0) {
                         throw new ConfigException(
                                 "You must only provide a single value for row_heights in the config");
                     }
@@ -243,7 +253,7 @@ public class Config {
                  * Define the column widths
                  */
                 if (line.startsWith("col_widths")) {
-                    if (colWidthsStrs != null) {
+                    if (colWidthsStrs.length > 0) {
                         throw new ConfigException(
                                 "You must only provide a single value for col_widths in the config");
                     }

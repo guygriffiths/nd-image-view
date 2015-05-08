@@ -57,14 +57,14 @@ Of the form `grid_i_j = <coord>`.  `i` and `j` represent the row and column to p
 ### Dimensions and their values
 Of the form:
 
-    [dimname]
+    [dimname;Dimension Title]
     dimval1
     dimval2
     dimval2
 
-If a dimension can have an empty value, ths `dimval` should be set to `.` (i.e. a single dot).
+If a dimension can have an empty value, ths `dimval` should be set to `.` (i.e. a single dot).  `dimname` is the identifier used in the name format and the title is what is displayed next to the variable selector.  The title is optional.
 
-All dimensions should be defined in this way.  
+All dimensions found in the name format must be defined in this way.  
 
 settings.cfg may also optionally contain:
 
@@ -78,4 +78,4 @@ Of the form `row_heights = x,y,z...` where x, y, z, etc. are the percentage row 
 Contact
 -------
 
-To contact the author or provide any feedback, please visit the [project page](http://guygriffiths.github.io/d-image-view)
+To contact the author or provide any feedback, please visit the [project page](http://guygriffiths.github.io/nd-image-view)
