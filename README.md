@@ -36,7 +36,7 @@ Configuration of ND Image View is performed by creating a file named settings.cf
 It must contain the following mandatory elements:
 
 ### Data Path
-Of the form `path = /path/to/data1` or `path = C:/path/to/data`.  Note that slashes (rather than backslashes) should be used on Windows systems.
+Of the form `path = /path/to/data` or `path = C:/path/to/data`.  Note that slashes (rather than backslashes) should be used on Windows systems.
 
 ### Name Format
 Of the form `name_format = <format>`.  The format specifier must be as follows:
@@ -44,7 +44,7 @@ Of the form `name_format = <format>`.  The format specifier must be as follows:
 * It should be the name of the images within the data path, with variables representing the dimension names
 * Variables are written as `${dimname}` where the dimension name is one of the dimensions (which are defined later)
 * If a character is followed by `?` and then a variable name, that character is omitted if the value of the variable is empty
-* Other characters are interpreted literally, so the use subdirectories is supported 
+* Other characters are interpreted literally, so the use of subdirectories is supported 
 
 ### Dimension to plot by
 Of the form `plot_by = <dimname>`.  This defines which dimension (defined later) will vary across the screen.
@@ -62,7 +62,7 @@ Of the form:
     dimval2
     dimval2
 
-If a dimension can have an empty value, ths `dimval` should be set to `.` (i.e. a single dot).  `dimname` is the identifier used in the name format and the title is what is displayed next to the variable selector.  The title is optional.
+If a dimension can have an empty value, this `dimval` should be set to `.` (i.e. a single dot).  `dimname` is the identifier used in the name format and the title is what is displayed next to the variable selector.  The title is optional.
 
 All dimensions found in the name format must be defined in this way.  
 
