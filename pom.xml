@@ -12,11 +12,6 @@
     <name>N-dimensional image viewer</name>
     <packaging>jar</packaging>
 
-    <properties>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <edal-version>1.0-rc1</edal-version>
-    </properties>
-
     <url>https://github.com/guygriffiths/nd-image-view</url>
     <inceptionYear>2015</inceptionYear>
     <description>The N-dimensional image viewer is a piece of software for viewing a series of images which depend on multiple variables and provides a simple way of switching one of these variables at a time</description>
