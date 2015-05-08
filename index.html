@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="UTF-8">
+    <title>Nd-image-view by guygriffiths</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="stylesheets/normalize.css" media="screen">
+    <link href='http://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/github-light.css" media="screen">
+  </head>
+  <body>
+    <section class="page-header">
+      <h1 class="project-name">Nd-image-view</h1>
+      <h2 class="project-tagline">Viewer for displaying and easily switching between large sets of images which are dependent on many independent variables</h2>
+      <a href="https://github.com/guygriffiths/nd-image-view" class="btn">View on GitHub</a>
+      <a href="https://github.com/guygriffiths/nd-image-view/zipball/master" class="btn">Download .zip</a>
+      <a href="https://github.com/guygriffiths/nd-image-view/tarball/master" class="btn">Download .tar.gz</a>
+    </section>
+
+    <section class="main-content">
+      <h1>
+<a id="nd-image-view" class="anchor" href="#nd-image-view" aria-hidden="true"><span class="octicon octicon-link"></span></a>ND Image View</h1>
+
+<p>ND Image View is a small application for viewing sets of images which depend on many different variables.</p>
+
+<p>It was originally created for use in the sea-surface temperature (SST) project as part of the ESA climate change initiative (<a href="http://www.esa-sst-cci.org/">http://www.esa-sst-cci.org/</a>).  In this project, satellite measurements were being compared with in-situ measurements.  A large number of graphs of varying types (histogram, spatial, uncertainty, etc) was generated for many combinations of:</p>
+
+<ul>
+<li>Satellite instrument (~10 different ones)</li>
+<li>In-situ measurement type (~7 different types)</li>
+<li>Surface or depth measurement</li>
+<li>Different comparison methods (~5 different methods)</li>
+<li>Plot type (5 different plot types)</li>
+</ul>
+
+<p>This gives a combination of around 3500 possible plots (10 * 7 * 2 * 5 * 5), of which just over 1400 were present.</p>
+
+<p>To aid researchers in comparing results, ND Image View was developed.  It allows users, through use of a simple configuration file, to define the different dimensions which these plots depend on, display a number of graphs at once, and then change the value of one of these dimensions at a time to see what effect it has on the graphs.</p>
+
+<p>For example, once configured and run, ND Image View could be used to display all of the different plot types on a grid.  Through use of a simple interface, any one of the other variables which the graphs depend on can be changed to see what effect this has on the set of plots.</p>
+
+<p>"ND" stands for "N-Dimensional", since these variables can be considered as dimensions within an n-dimensional space filled with images :-)</p>
+
+<h2>
+<a id="downloading-the-software" class="anchor" href="#downloading-the-software" aria-hidden="true"><span class="octicon octicon-link"></span></a>Downloading The Software</h2>
+
+<p>ND Image View v1.0 can be downloaded from <a href="https://github.com/guygriffiths/nd-image-view/releases/tag/v1.0">here</a></p>
+
+<h2>
+<a id="running-the-software" class="anchor" href="#running-the-software" aria-hidden="true"><span class="octicon octicon-link"></span></a>Running The Software</h2>
+
+<p>ND Image View requires at least Java 8.  Once you have that you can either run it with:</p>
+
+<pre><code>java -jar nd-image-view.jar
+</code></pre>
+
+<p>or simply double-click on it in your file manager (OS-dependent).</p>
+
+<h2>
+<a id="configuration" class="anchor" href="#configuration" aria-hidden="true"><span class="octicon octicon-link"></span></a>Configuration</h2>
+
+<p>Configuration of ND Image View is performed by creating a file named settings.cfg in the same directory as the executable JAR file.  This distribution comes with a fully-documented example.  The documentation here is to clarify behaviour - it is recommended to read and modify the included example settings.cfg to get started.</p>
+
+<p>It must contain the following mandatory elements:</p>
+
+<h3>
+<a id="data-path" class="anchor" href="#data-path" aria-hidden="true"><span class="octicon octicon-link"></span></a>Data Path</h3>
+
+<p>Of the form <code>path = /path/to/data1</code> or <code>path = C:/path/to/data</code>.  Note that slashes (rather than backslashes) should be used on Windows systems.</p>
+
+<h3>
+<a id="name-format" class="anchor" href="#name-format" aria-hidden="true"><span class="octicon octicon-link"></span></a>Name Format</h3>
+
+<p>Of the form <code>name_format = &lt;format&gt;</code>.  The format specifier must be as follows:</p>
+
+<ul>
+<li>It should be the name of the images within the data path, with variables representing the dimension names</li>
+<li>Variables are written as <code>${dimname}</code> where the dimension name is one of the dimensions (which are defined later)</li>
+<li>If a character is followed by <code>?</code> and then a variable name, that character is omitted if the value of the variable is empty</li>
+<li>Other characters are interpreted literally, so the use subdirectories is supported </li>
+</ul>
+
+<h3>
+<a id="dimension-to-plot-by" class="anchor" href="#dimension-to-plot-by" aria-hidden="true"><span class="octicon octicon-link"></span></a>Dimension to plot by</h3>
+
+<p>Of the form <code>plot_by = &lt;dimname&gt;</code>.  This defines which dimension (defined later) will vary across the screen.</p>
+
+<h3>
+<a id="which-images-to-plot-where" class="anchor" href="#which-images-to-plot-where" aria-hidden="true"><span class="octicon octicon-link"></span></a>Which images to plot where</h3>
+
+<p>Of the form <code>grid_i_j = &lt;coord&gt;</code>.  <code>i</code> and <code>j</code> represent the row and column to plot a particular image, and <code>&lt;coord&gt;</code> should be a valid value of the dimension defined by <code>plot_by</code>.</p>
+
+<p><code>&lt;coord&gt;</code> can also take the special value <code>${settings}</code> which will be the location of the settings interface.  You must define this at exactly one location</p>
+
+<h3>
+<a id="dimensions-and-their-values" class="anchor" href="#dimensions-and-their-values" aria-hidden="true"><span class="octicon octicon-link"></span></a>Dimensions and their values</h3>
+
+<p>Of the form:</p>
+
+<pre><code>[dimname;Dimension Title]
+dimval1
+dimval2
+dimval2
+</code></pre>
+
+<p>If a dimension can have an empty value, ths <code>dimval</code> should be set to <code>.</code> (i.e. a single dot).  <code>dimname</code> is the identifier used in the name format and the title is what is displayed next to the variable selector.  The title is optional.</p>
+
+<p>All dimensions found in the name format must be defined in this way.  </p>
+
+<p>settings.cfg may also optionally contain:</p>
+
+<h3>
+<a id="relative-column-widths" class="anchor" href="#relative-column-widths" aria-hidden="true"><span class="octicon octicon-link"></span></a>Relative column widths</h3>
+
+<p>Of the form <code>col_widths = x,y,z...</code> where x, y, z, etc. are the percentage column widths.  If more widths than columns are specified, the final ones will be ignored.  If fewer widths than columns are defined, the remaining columns will be of equal width distributed in the remaining space. </p>
+
+<h3>
+<a id="relative-row-heights" class="anchor" href="#relative-row-heights" aria-hidden="true"><span class="octicon octicon-link"></span></a>Relative row heights</h3>
+
+<p>Of the form <code>row_heights = x,y,z...</code> where x, y, z, etc. are the percentage row heights.  If more heights than rows are specified, the final ones will be ignored.  If fewer heights than rows are defined, the remaining rows will be of equal height distributed in the remaining space.</p>
+
+<h2>
+<a id="contact" class="anchor" href="#contact" aria-hidden="true"><span class="octicon octicon-link"></span></a>Contact</h2>
+
+<p>To contact the author or provide any feedback, please visit the <a href="http://guygriffiths.github.io/nd-image-view">project page</a></p>
+
+      <footer class="site-footer">
+        <span class="site-footer-owner"><a href="https://github.com/guygriffiths/nd-image-view">Nd-image-view</a> is maintained by <a href="https://github.com/guygriffiths">guygriffiths</a>.</span>
+
+        <span class="site-footer-credits">This page was generated by <a href="https://pages.github.com">GitHub Pages</a> using the <a href="https://github.com/jasonlong/cayman-theme">Cayman theme</a> by <a href="https://twitter.com/jasonlong">Jason Long</a>.</span>
+      </footer>
+
+    </section>
+
+  
+  </body>
+</html>
+
